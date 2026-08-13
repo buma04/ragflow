@@ -2,6 +2,107 @@ include:
   - ./docker-compose-base.yml
 # To ensure that the container processes the locally modified `service_conf.yaml.template` instead of the one included in its image, you need to mount the local `service_conf.yaml.template` to the container.
 services:
+  hf-model-downloader:
+    image: ${HF_DOWNLOADER_IMAGE:-huggingface/huggingface_hub:0.34.4}
+    env_file: .env
+    volumes:
+      - qwen_models:/models
+      - ./local-demo/download-model.sh:/usr/local/bin/download-model:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/download-model"]
+    restart: "no"
+
+  vllm-qwen:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.26.0}
+    depends_on:
+      hf-model-downloader:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      NVIDIA_VISIBLE_DEVICES: ${VLLM_GPU_IDS:-0,1}
+    volumes:
+      - qwen_models:/models:ro
+      - ./local-demo/start-vllm.sh:/usr/local/bin/start-vllm:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/start-vllm"]
+    expose: ["8000"]
+    networks: [ragflow]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0", "1"]
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'Authorization: Bearer ${QWEN_API_KEY:-local-demo-key}' http://localhost:8000/v1/models >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 120
+      start_period: 60s
+    restart: unless-stopped
+
+  local-model-bootstrap:
+    image: ${RAGFLOW_IMAGE}
+    depends_on:
+      ragflow-cpu:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template:ro
+      - ./local-demo/bootstrap-models.py:/ragflow/bootstrap-models.py:ro
+    entrypoint: ["python", "/ragflow/bootstrap-models.py"]
+    networks: [ragflow]
+    restart: "no"
+
+  paddleocr-cpu:
+    profiles: [paddleocr-cpu]
+    build:
+      context: ./paddleocr
+      args:
+        PADDLE_DEVICE_PACKAGE: paddlepaddle==3.2.2
+    environment:
+      OCR_DEVICE: cpu
+      OCR_MODEL: ${OCR_MODEL:-PP-StructureV3}
+      PADDLE_HOME: /models/.paddle
+    volumes: [paddle_models:/models]
+    networks:
+      ragflow:
+        aliases: [paddleocr]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+
+  paddleocr-gpu:
+    profiles: [paddleocr-gpu]
+    build:
+      context: ./paddleocr
+      args:
+        PADDLE_DEVICE_PACKAGE: paddlepaddle-gpu==3.2.2
+    environment:
+      OCR_DEVICE: gpu
+      OCR_MODEL: ${OCR_MODEL:-PP-StructureV3}
+      PADDLE_HOME: /models/.paddle
+      NVIDIA_VISIBLE_DEVICES: ${OCR_GPU_ID:-2}
+    volumes: [paddle_models:/models]
+    networks:
+      ragflow:
+        aliases: [paddleocr]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${OCR_GPU_ID:-2}"]
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+
   deepdoc:
     image: ${DEEPDOC_IMAGE:-deepdoc_oss:latest}
     profiles:
@@ -21,6 +122,8 @@ services:
   ragflow-cpu:
     depends_on:
       mysql:
+        condition: service_healthy
+      vllm-qwen:
         condition: service_healthy
     profiles:
       - cpu
@@ -64,6 +167,11 @@ services:
     networks:
       - ragflow
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9380/api/v1/system/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 60
     # https://docs.docker.com/engine/daemon/prometheus/#create-a-prometheus-configuration
     # If you use Docker Desktop, the --add-host flag is optional. This flag ensures that the host's internal IP is exposed to the Prometheus container.
     extra_hosts:
@@ -72,6 +180,8 @@ services:
   ragflow-gpu:
     depends_on:
       mysql:
+        condition: service_healthy
+      vllm-qwen:
         condition: service_healthy
     profiles:
       - gpu
@@ -112,6 +222,11 @@ services:
     networks:
       - ragflow
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9380/api/v1/system/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 60
     # https://docs.docker.com/engine/daemon/prometheus/#create-a-prometheus-configuration
     # If you use Docker Desktop, the --add-host flag is optional. This flag ensures that the host's internal IP is exposed to the Prometheus container.
     extra_hosts:
@@ -149,3 +264,7 @@ services:
   #           - driver: nvidia
   #             count: all
   #             capabilities: [gpu]
+
+volumes:
+  qwen_models:
+  paddle_models:

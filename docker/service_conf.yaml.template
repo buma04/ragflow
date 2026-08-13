@@ -70,9 +70,16 @@ file_syncer:
   sync_interval: 3
 user_default_llm:
   default_models:
+    chat_model:
+      name: '${QWEN_SERVED_NAME:-qwen3.5-9b}'
+      factory: 'VLLM'
+      api_key: '${QWEN_API_KEY:-local-demo-key}'
+      base_url: 'http://vllm-qwen:8000/v1'
     embedding_model:
-      api_key: 'xxx'
-      base_url: 'http://${TEI_HOST}:80'
+      name: '${TEI_MODEL:-BAAI/bge-m3}'
+      factory: 'Builtin'
+      api_key: 'local'
+      base_url: 'http://${TEI_HOST:-embedding}:80'
 # postgres:
 #   name: '${POSTGRES_DBNAME:-rag_flow}'
 #   user: '${POSTGRES_USER:-rag_flow}'

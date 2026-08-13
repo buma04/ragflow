@@ -274,13 +274,21 @@ services:
     profiles:
       - tei-cpu
     image: ${TEI_IMAGE_CPU}
-    hostname: tei
+    hostname: embedding
     ports:
       - ${TEI_PORT-6380}:80
     env_file: .env
     networks:
-      - ragflow
+      ragflow:
+        aliases: [embedding]
     command: ["--model-id", "/data/${TEI_MODEL}", "--auto-truncate"]
+    volumes:
+      - tei_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
     restart: unless-stopped
 
 
@@ -288,19 +296,27 @@ services:
     profiles:
       - tei-gpu
     image: ${TEI_IMAGE_GPU}
-    hostname: tei
+    hostname: embedding
     ports:
       - ${TEI_PORT-6380}:80
     env_file: .env
     networks:
-      - ragflow
+      ragflow:
+        aliases: [embedding]
     command: ["--model-id", "/data/${TEI_MODEL}", "--auto-truncate"]
+    volumes:
+      - tei_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: all
+              device_ids: ["${EMBEDDING_GPU_ID:-2}"]
               capabilities: [gpu]
     restart: unless-stopped
 
