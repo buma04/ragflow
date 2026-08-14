@@ -43,13 +43,16 @@ services:
   local-model-bootstrap:
     image: ${RAGFLOW_IMAGE}
     depends_on:
+      es01:
+        condition: service_healthy
       ragflow-cpu:
         condition: service_healthy
     env_file: .env
     volumes:
       - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template:ro
       - ./local-demo/bootstrap-models.py:/ragflow/bootstrap-models.py:ro
-    entrypoint: ["python", "/ragflow/bootstrap-models.py"]
+      - ./local-demo/run-bootstrap.sh:/ragflow/run-bootstrap.sh:ro
+    entrypoint: ["bash", "/ragflow/run-bootstrap.sh"]
     networks: [ragflow]
     restart: "no"
 
