@@ -115,12 +115,15 @@ def _ensure_ocr_provider_from_env(tenant_id: str, provider_name: str, model_name
     api_key = json.dumps(config)
     instance_obj = TenantModelInstanceService.get_by_provider_id_and_api_key(provider_obj.id, api_key)
     if not instance_obj:
-        instance_obj = TenantModelInstanceService.create_instance(
+        TenantModelInstanceService.create_instance(
             provider_id=provider_obj.id,
             instance_name=model_name,
             api_key=api_key,
             extra="{}",
         )
+        instance_obj = TenantModelInstanceService.get_by_provider_id_and_api_key(provider_obj.id, api_key)
+        if not instance_obj:
+            raise RuntimeError(f"Failed to create {provider_name} model instance for tenant {tenant_id}")
 
     model_obj = TenantModelService.get_by_provider_id_and_instance_id_and_model_type_and_model_name(
         provider_obj.id,

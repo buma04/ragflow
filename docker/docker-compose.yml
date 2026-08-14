@@ -52,6 +52,7 @@ services:
       - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template:ro
       - ./local-demo/bootstrap-models.py:/ragflow/bootstrap-models.py:ro
       - ./local-demo/run-bootstrap.sh:/ragflow/run-bootstrap.sh:ro
+      - ../api/db/joint_services/tenant_model_service.py:/ragflow/api/db/joint_services/tenant_model_service.py:ro
     entrypoint: ["bash", "/ragflow/run-bootstrap.sh"]
     networks: [ragflow]
     restart: "no"
