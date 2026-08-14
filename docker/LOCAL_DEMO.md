@@ -6,6 +6,11 @@ separate containers intentionally sharing GPU 2; GPU assignment is visibility,
 not exclusive ownership. The vLLM reservation lists only devices 0 and 1, so it
 cannot see GPU 2.
 
+The PaddleOCR GPU image installs PaddlePaddle 3.2.2 from Paddle's pinned CUDA
+11.8 wheel index. CUDA 11.8 is selected for compatibility with the deployment
+host's NVIDIA 535 driver; Paddle GPU 3.x is not installed from the default PyPI
+index.
+
 The setup installs and starts a dedicated `docker-ragflow.service`. Its socket
 is `/run/docker-ragflow.sock`, while its images, writable layers, containers,
 and volumes live under `/u01/docker-ragflow`. It does not reconfigure or restart

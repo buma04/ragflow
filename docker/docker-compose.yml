@@ -59,6 +59,7 @@ services:
       context: ./paddleocr
       args:
         PADDLE_DEVICE_PACKAGE: paddlepaddle==3.2.2
+        PADDLE_INDEX_URL: https://www.paddlepaddle.org.cn/packages/stable/cpu/
     environment:
       OCR_DEVICE: cpu
       OCR_MODEL: ${OCR_MODEL:-PP-StructureV3}
@@ -80,6 +81,7 @@ services:
       context: ./paddleocr
       args:
         PADDLE_DEVICE_PACKAGE: paddlepaddle-gpu==3.2.2
+        PADDLE_INDEX_URL: https://www.paddlepaddle.org.cn/packages/stable/cu118/
     environment:
       OCR_DEVICE: gpu
       OCR_MODEL: ${OCR_MODEL:-PP-StructureV3}
