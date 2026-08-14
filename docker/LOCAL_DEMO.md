@@ -56,6 +56,16 @@ Internal endpoints are:
 - RAGFlow to TEI: `http://embedding:80`
 - RAGFlow to PaddleOCR: `http://paddleocr:8080`
 
+The demo publishes RAGFlow on a dedicated host-port range so it does not claim
+the existing services' ports:
+
+- Web HTTP: `http://HOST:18080`
+- Web HTTPS: `https://HOST:18443`
+- HTTP API: `http://HOST:19380`
+- Admin API: `http://HOST:19381`
+- MCP: `http://HOST:19382`
+- Go admin/API: ports `19383` and `19384`
+
 `service_conf.yaml.template` supplies chat and embedding defaults for newly
 created tenants. After RAGFlow becomes healthy, `local-model-bootstrap` uses
 the repository's model-provider services to upsert VLLM and PaddleOCR for every
