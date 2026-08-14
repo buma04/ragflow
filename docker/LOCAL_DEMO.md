@@ -61,7 +61,7 @@ Internal endpoints are:
 The demo publishes RAGFlow on a dedicated host-port range so it does not claim
 the existing services' ports:
 
-- Web HTTP: `http://HOST:18080`
+- Web HTTP: `http://HOST:8989`
 - Web HTTPS: `https://HOST:18443`
 - HTTP API: `http://HOST:19380`
 - Admin API: `http://HOST:19381`
