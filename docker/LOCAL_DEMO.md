@@ -68,12 +68,27 @@ the existing services' ports:
 - MCP: `http://HOST:19382`
 - Go admin/API: ports `19383` and `19384`
 
-`service_conf.yaml.template` supplies chat and embedding defaults for newly
-created tenants. After RAGFlow becomes healthy, `local-model-bootstrap` uses
-the repository's model-provider services to upsert VLLM and PaddleOCR for every
-tenant and selects the local chat/embedding/OCR defaults. It is idempotent and
-does not hardcode tenant IDs. This demo intentionally replaces existing tenant
-defaults; do not use that bootstrap behavior in a shared deployment.
+After RAGFlow becomes healthy, the one-shot `local-model-bootstrap` service
+uses the repository's model-provider services to upsert VLLM and PaddleOCR for
+every tenant that exists at that time and selects the local
+chat/embedding/OCR defaults. It is idempotent and does not hardcode tenant IDs.
+
+On a fresh installation, create and sign in to the first RAGFlow account, then
+run the bootstrap again because that tenant did not exist during initial stack
+startup:
+
+```bash
+docker -H unix:///run/docker-ragflow.sock compose \
+  -f docker/docker-compose.yml up \
+  --no-deps --force-recreate local-model-bootstrap
+```
+
+Its logs must contain `Configured local demo models for tenant ...`, and
+`docker compose ps -a local-model-bootstrap` must report exit code 0. Refresh
+the Model providers page after it completes. Repeat this command after creating
+another tenant that needs the local defaults. This demo intentionally replaces
+existing tenant defaults; do not use that bootstrap behavior in a shared
+deployment.
 
 Auxiliary modes are mutually exclusive Compose profiles. Select one with:
 
