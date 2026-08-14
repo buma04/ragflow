@@ -25,7 +25,9 @@ host as experimental.
 The resource preflight checks the dedicated daemon, NVIDIA runtime, three
 visible GPUs, 18 GiB free on GPUs 0 and 1, and at least 40 GiB free under
 `/u01/docker-ragflow`. It also verifies that the daemon reports that exact
-Docker data root.
+Docker data root. On subsequent idempotent runs, an already-running RAGFlow
+vLLM container owns the expected GPU 0/1 allocation, so the free-VRAM startup
+gate is skipped without stopping or restarting that container.
 
 Start the complete project with:
 

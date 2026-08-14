@@ -15,13 +15,22 @@ mapfile -t gpu_rows < <(nvidia-smi --query-gpu=index,name,memory.total,memory.us
 ((${#gpu_rows[@]} >= 3)) || { echo "ERROR: at least 3 GPUs required; found ${#gpu_rows[@]}" >&2; exit 1; }
 printf '%s\n' "${gpu_rows[@]}"
 
-for index in 0 1; do
-  free=$(printf '%s\n' "${gpu_rows[@]}" | awk -F, -v target="$index" '$1+0 == target {gsub(/ /,"",$5); print $5}')
-  [[ -n "$free" && "$free" -ge "$threshold_mib" ]] || {
-    echo "ERROR: GPU $index has ${free:-unknown} MiB free; need $threshold_mib MiB. Stop other GPU processes or lower the documented vLLM memory/context settings; GPU 2 will not be substituted." >&2
-    exit 1
-  }
-done
+vllm_containers=$("${docker_cmd[@]}" ps \
+  --filter label=com.docker.compose.service=vllm-qwen \
+  --filter status=running --quiet)
+vllm_container=${vllm_containers%%$'\n'*}
+if [[ -n "$vllm_container" ]]; then
+  vllm_status=$("${docker_cmd[@]}" inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$vllm_container")
+  echo "Existing RAGFlow vLLM container is running ($vllm_status); its expected GPU 0/1 allocation is preserved."
+else
+  for index in 0 1; do
+    free=$(printf '%s\n' "${gpu_rows[@]}" | awk -F, -v target="$index" '$1+0 == target {gsub(/ /,"",$5); print $5}')
+    [[ -n "$free" && "$free" -ge "$threshold_mib" ]] || {
+      echo "ERROR: GPU $index has ${free:-unknown} MiB free; need $threshold_mib MiB before starting vLLM. Existing processes are not modified and GPU 2 will not be substituted." >&2
+      exit 1
+    }
+  done
+fi
 
 "${docker_cmd[@]}" info --format '{{json .Runtimes}}' | grep -qi nvidia || { echo "ERROR: NVIDIA Container Toolkit runtime not detected in dedicated daemon" >&2; exit 1; }
 [[ -d "$docker_data_root" ]] || { echo "ERROR: Docker data root missing: $docker_data_root" >&2; exit 1; }
