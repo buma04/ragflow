@@ -15,6 +15,14 @@ managed separately.
 Start the complete project with:
 
 ```bash
+./scripts/setup-local-demo.sh
+```
+
+This single entrypoint fast-forwards `origin/main`, runs the resource preflight,
+selects the default `aux-gpu` profile, validates Compose, and builds/starts the
+stack. The equivalent manual start command is:
+
+```bash
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
