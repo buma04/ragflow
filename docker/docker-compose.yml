@@ -3,12 +3,12 @@ include:
 # To ensure that the container processes the locally modified `service_conf.yaml.template` instead of the one included in its image, you need to mount the local `service_conf.yaml.template` to the container.
 services:
   hf-model-downloader:
-    image: ${HF_DOWNLOADER_IMAGE:-huggingface/huggingface_hub:0.34.4}
+    build:
+      context: ./local-demo
+      dockerfile: Dockerfile.downloader
     env_file: .env
     volumes:
       - qwen_models:/models
-      - ./local-demo/download-model.sh:/usr/local/bin/download-model:ro
-    entrypoint: ["/bin/sh", "/usr/local/bin/download-model"]
     restart: "no"
 
   vllm-qwen:

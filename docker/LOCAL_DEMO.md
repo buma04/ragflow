@@ -22,6 +22,8 @@ The one-shot downloader stores `Qwen/Qwen3.5-9B` in the `qwen_models` volume.
 It records the repository and revision only after `hf download` succeeds.
 Compose starts vLLM only after that service exits successfully. TEI and Paddle
 model caches use the `tei_data` and `paddle_models` volumes.
+The downloader image is built locally from `python:3.13-slim-bookworm` and a
+pinned `huggingface_hub`; it does not rely on a non-existent prebuilt Hub image.
 
 Internal endpoints are:
 
