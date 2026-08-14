@@ -14,10 +14,13 @@ index.
 The setup installs and starts a dedicated `docker-ragflow.service`. Its socket
 is `/run/docker-ragflow.sock`, while its images, writable layers, containers,
 and volumes live under `/u01/docker-ragflow`. It does not reconfigure or restart
-the default Docker daemon. The dedicated daemon uses a separate socket, PID,
-exec root, data root, address pool, and a dedicated `docker-ragflow0` bridge on
-`10.230.0.0/24`. It does not reuse the default daemon's `docker0`. Docker
-documents multiple daemons on one host as experimental.
+the default Docker daemon. A matching `containerd-ragflow.service` uses
+`/run/containerd-ragflow/containerd.sock` and `/u01/containerd-ragflow`, so it
+does not connect to the system containerd or mix containerd/shim versions. The
+dedicated daemon also uses a separate socket, PID, exec root, data root, address
+pool, and a dedicated `docker-ragflow0` bridge on `10.230.0.0/24`. It does not
+reuse the default daemon's `docker0`. Docker documents multiple daemons on one
+host as experimental.
 
 The resource preflight checks the dedicated daemon, NVIDIA runtime, three
 visible GPUs, 18 GiB free on GPUs 0 and 1, and at least 40 GiB free under
