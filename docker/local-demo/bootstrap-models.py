@@ -10,7 +10,7 @@ from api.db.services.tenant_model_instance_service import TenantModelInstanceSer
 from api.db.services.tenant_model_provider_service import TenantModelProviderService
 from api.db.services.tenant_model_service import TenantModelService
 from api.db.services.user_service import TenantService
-from common.constants import LLMType
+from common.constants import LLMType, StatusEnum
 from common.misc_utils import get_uuid
 
 
@@ -48,7 +48,7 @@ def ensure_vllm(tenant_id: str) -> str:
 
 def main():
     embedding = os.getenv("TEI_MODEL", "BAAI/bge-m3")
-    for tenant in TenantService.query():
+    for tenant in TenantService.query(status=StatusEnum.VALID.value):
         chat = ensure_vllm(tenant.id)
         ocr = ensure_paddleocr_from_env(tenant.id)
         updates = {"llm_id": chat, "embd_id": embedding}
