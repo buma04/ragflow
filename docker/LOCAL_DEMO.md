@@ -6,11 +6,17 @@ separate containers intentionally sharing GPU 2; GPU assignment is visibility,
 not exclusive ownership. The vLLM reservation lists only devices 0 and 1, so it
 cannot see GPU 2.
 
-Before deployment, run `scripts/check-demo-resources.sh` on the target Linux
-host. It checks Docker, NVIDIA Container Toolkit, three visible GPUs, 18 GiB
-free on GPUs 0 and 1, and 40 GiB disk space. This repository intentionally does
-not run that check automatically because model download and deployment may be
-managed separately.
+The setup installs and starts a dedicated `docker-ragflow.service`. Its socket
+is `/run/docker-ragflow.sock`, while its images, writable layers, containers,
+and volumes live under `/u01/docker-ragflow`. It does not reconfigure or restart
+the default Docker daemon. The dedicated daemon uses a separate socket, PID,
+exec root, data root, address pool, and no default bridge. Docker documents
+multiple daemons on one host as experimental.
+
+The resource preflight checks the dedicated daemon, NVIDIA runtime, three
+visible GPUs, 18 GiB free on GPUs 0 and 1, and at least 40 GiB free under
+`/u01/docker-ragflow`. It also verifies that the daemon reports that exact
+Docker data root.
 
 Start the complete project with:
 
@@ -18,12 +24,14 @@ Start the complete project with:
 ./scripts/setup-local-demo.sh
 ```
 
-This single entrypoint fast-forwards `origin/main`, runs the resource preflight,
-selects the default `aux-gpu` profile, validates Compose, and builds/starts the
-stack. The equivalent manual start command is:
+This single entrypoint fast-forwards `origin/main`, installs or updates the
+dedicated systemd service, runs the resource preflight, selects the default
+`aux-gpu` profile, validates Compose, and builds/starts the stack. Run it as
+root, or as a sudo-capable user. The equivalent manual Compose command is:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker -H unix:///run/docker-ragflow.sock compose \
+  -f docker/docker-compose.yml up -d --build
 ```
 
 The one-shot downloader stores `Qwen/Qwen3.5-9B` in the `qwen_models` volume.
@@ -58,13 +66,21 @@ scripts/set-demo-aux-mode.sh aux-cpu
 Then run the same Compose command. Never enable both `tei-cpu`/`tei-gpu` or
 both `paddleocr-cpu`/`paddleocr-gpu`: each pair shares a network alias and port.
 
-If vLLM runs out of memory, first remove unrelated GPU processes, then lower
-memory utilization to 0.70, context to 8192, and sequence count to 2, in that
-order. Do not change TP to 3 and do not silently use GPU 2.
+Existing GPU processes are left untouched. If vLLM needs a smaller allocation,
+lower memory utilization to 0.70, context to 8192, and sequence count to 2, in
+that order. Do not change TP to 3 and do not silently use GPU 2.
 
 After the stack is healthy, `scripts/smoke-test-demo.sh` performs direct service
 checks. Its RAGFlow integration stage is intentionally not fabricated: an
 authenticated API token and a user-owned dataset are required.
+
+All lifecycle commands must target the dedicated socket explicitly:
+
+```bash
+docker -H unix:///run/docker-ragflow.sock compose -f docker/docker-compose.yml ps
+docker -H unix:///run/docker-ragflow.sock compose -f docker/docker-compose.yml logs -f
+docker -H unix:///run/docker-ragflow.sock compose -f docker/docker-compose.yml down
+```
 
 `aux-gpu` is the default and enables `tei-gpu` plus `paddleocr-gpu`; both
 services independently request physical GPU 2. The remaining modes preserve

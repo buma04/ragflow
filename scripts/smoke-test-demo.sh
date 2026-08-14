@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-compose=(docker compose -f docker/docker-compose.yml)
+compose=(docker -H unix:///run/docker-ragflow.sock compose -f docker/docker-compose.yml)
 api_key=${QWEN_API_KEY:-local-demo-key}
 model=${QWEN_SERVED_NAME:-qwen3.5-9b}
 

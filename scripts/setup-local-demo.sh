@@ -6,11 +6,19 @@ repo_root=$(cd -- "$script_dir/.." && pwd)
 
 cd "$repo_root"
 
-git pull --ff-only origin main
+if [[ ${RAGFLOW_SETUP_AFTER_PULL:-0} != 1 ]]; then
+  git pull --ff-only origin main
+  exec env RAGFLOW_SETUP_AFTER_PULL=1 "$repo_root/scripts/setup-local-demo.sh" "$@"
+fi
+if ((EUID == 0)); then
+  ./scripts/setup-ragflow-docker.sh
+else
+  sudo ./scripts/setup-ragflow-docker.sh
+fi
 ./scripts/check-demo-resources.sh
 ./scripts/set-demo-aux-mode.sh aux-gpu
-docker compose -f docker/docker-compose.yml config --quiet
-docker compose -f docker/docker-compose.yml up -d --build
+docker -H unix:///run/docker-ragflow.sock compose -f docker/docker-compose.yml config --quiet
+docker -H unix:///run/docker-ragflow.sock compose -f docker/docker-compose.yml up -d --build
 
 echo "Local RAGFlow demo startup requested successfully."
-echo "Run: docker compose -f docker/docker-compose.yml ps"
+echo "Run: docker -H unix:///run/docker-ragflow.sock compose -f docker/docker-compose.yml ps"
