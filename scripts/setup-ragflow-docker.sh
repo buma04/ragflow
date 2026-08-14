@@ -18,6 +18,7 @@ nvidia_runtime=$(command -v nvidia-container-runtime) || {
   echo "ERROR: nvidia-container-runtime not found" >&2
   exit 1
 }
+ip_command=$(command -v ip) || { echo "ERROR: ip command not found" >&2; exit 1; }
 
 [[ -d /u01 ]] || { echo "ERROR: /u01 does not exist" >&2; exit 1; }
 mkdir -p "$data_root" "$config_dir"
@@ -32,7 +33,7 @@ cat >"$config_tmp" <<EOF
   "exec-root": "/run/docker-ragflow",
   "pidfile": "/run/docker-ragflow.pid",
   "hosts": ["unix://$socket"],
-  "bridge": "none",
+  "bridge": "docker-ragflow0",
   "storage-driver": "overlay2",
   "features": {"containerd-snapshotter": false},
   "default-address-pools": [
@@ -56,6 +57,9 @@ Wants=network-online.target
 
 [Service]
 Type=notify
+ExecStartPre=-$ip_command link add name docker-ragflow0 type bridge
+ExecStartPre=$ip_command address replace 10.230.0.1/24 dev docker-ragflow0
+ExecStartPre=$ip_command link set docker-ragflow0 up
 ExecStart=$(command -v dockerd) --config-file=$config_file
 ExecReload=/bin/kill -s HUP \$MAINPID
 Restart=always
